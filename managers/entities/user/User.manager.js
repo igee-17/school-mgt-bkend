@@ -14,6 +14,7 @@ module.exports = class UserManager {
         this.httpExposed = [
             'loginUser',
             'createSuperAdmin',
+            'delete=deleteSuperAdmin',
         ];
     }
 
@@ -117,5 +118,23 @@ module.exports = class UserManager {
         });
 
         return { longToken, role: user.role };
+    }
+
+    /**
+     * DELETE /api/user/deleteSuperAdmin
+     * Removes the superadmin account so a new one can be bootstrapped via createSuperAdmin.
+     * Protected by adminSecret — no token required.
+     */
+    async deleteSuperAdmin({ adminSecret }) {
+        if (!adminSecret || adminSecret !== this.config.dotEnv.ADMIN_SECRET) {
+            return { code: 401, error: 'invalid admin secret' };
+        }
+
+        const superadmin = await this.mongomodels.user.findOneAndDelete({ role: 'superadmin' });
+        if (!superadmin) {
+            return { code: 404, error: 'no superadmin account found' };
+        }
+
+        return { message: 'superadmin deleted — you may now create a new one via createSuperAdmin' };
     }
 }
